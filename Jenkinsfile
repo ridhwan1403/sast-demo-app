@@ -1,22 +1,37 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'python:3.12'
+            args '-u root'
+        }
+    }
+
     stages {
         stage('Checkout') {
             steps {
                 git url: 'https://github.com/ridhwan1403/sast-demo-app.git', branch: 'master'
             }
         }
-        stage('Install Dependencies') {
+        stage('Install Bandit') {
             steps {
                 sh 'pip install bandit'
             }
         }
         stage('SAST Analysis') {
             steps {
-                sh 'bandit -f xml -o bandit-output.xml -r . || true'
-                recordIssues tools: [bandit(pattern: 'bandit-output.xml')]
+                sh 'bandit -r . -f html -o bandit-report.html || true'
+            }
+        }
+        stage('Publish Report') {
+            steps {
+                publishHTML(target: [
+                    reportName: 'Bandit Report',
+                    reportDir: '.',
+                    reportFiles: 'bandit-report.html',
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true
+                ])
             }
         }
     }
 }
-
